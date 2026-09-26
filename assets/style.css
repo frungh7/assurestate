@@ -4,21 +4,21 @@
 
 :root {
 
-  --bg: #0b1220;
+  --bg: #0b1220; /* very dark navy/blue*/
 
-  --card: #111a2e;
+  --card: #111a2e;  /* dark navy*/
 
-  --text: #e8eefc;
+  --text: #e8eefc;  /* very light blue-white */
 
-  --muted: #a9b5d6;
+  --muted: #a9b5d6;  /* soft blue-gray */
 
-  --brand: #2dd4bf;
+  --brand: #2dd4bf;  /* Teal/Turquoise */
 
-  --brand2: #60a5fa;
+  --brand2: #60a5fa;  /* light blue */
 
-  --border: rgba(255,255,255,.10);
+  --border: rgba(255,255,255,.10);  /* white*/
 
-  --shadow: 0 18px 50px rgba(0,0,0,.35);
+  --shadow: 0 18px 50px rgba(0,0,0,.35);  /* 35% black*/
 
   --radius: 18px;
 
@@ -403,7 +403,6 @@ h1 {
   gap: 12px;
 
   height: 100%;
-
 }
 
 
@@ -520,6 +519,7 @@ h1 {
 
   padding-top: 10px;
 
+background: rgba(15,198,214,.03);
 }
 
 
@@ -590,7 +590,6 @@ h1 {
 .card p {
 
   margin: 0;
-
 }
 
 
@@ -650,7 +649,7 @@ textarea {
 
   border: 1px solid rgba(255,255,255,.14);
 
-  background: rgba(0,0,0,.15);
+  background: rgba(0,0,0,.75);
 
   color: var(--text);
 
@@ -668,7 +667,6 @@ select:focus,
 textarea:focus {
 
   border-color: rgba(45,212,191,.7);
-
 }
 
 
