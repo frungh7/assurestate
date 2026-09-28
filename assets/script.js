@@ -22,7 +22,7 @@ const ASSURESTATE_CONFIG = {
   // https://formspree.io/f/abcdwxyz
   //
   FORMSPREE_ENDPOINT:
-    "https://formspree.io/f/abdcsedldj",
+    "https://formspree.io/f/xvkgaejz",
 
 
   // ------------------------------------------------
