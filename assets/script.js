@@ -1,6 +1,8 @@
+```javascript
 // ==================================================
 // ASSURESTATE LLC
-// FORM + CRM INTEGRATION
+// FORMSPREE + ZOHO CRM INTEGRATION
+// GitHub Pages Compatible
 // ==================================================
 
 
@@ -10,46 +12,41 @@
 
 const ASSURESTATE_CONFIG = {
 
-  /*
-   * Replace this with the Formspree endpoint
-   * from your Formspree dashboard.
-   *
-   * Example:
-   *
-   * https://formspree.io/f/abcdwxyz
-   */
-
+  // ------------------------------------------------
+  // FORMSPREE
+  // ------------------------------------------------
+  //
+  // This MUST be your Formspree endpoint.
+  //
+  // Example:
+  // https://formspree.io/f/abcdwxyz
+  //
   FORMSPREE_ENDPOINT:
-    "https://formspree.io/f/xvkgaejz",
-    "https://formspree.io/f/xvkgaejz",
+    "https://formspree.io/f/abdcsedldj",
 
 
-  /*
-   * Zoho Webform endpoint.
-   *
-   * IMPORTANT:
-   *
-   * Do NOT put a Zoho API secret/client secret here.
-   *
-   * This value will come from the HTML generated
-   * by your Zoho CRM Webform.
-   */
-
-  ZOHO_ENABLED: false,
+  // ------------------------------------------------
+  // ZOHO CRM
+  // ------------------------------------------------
+  //
+  // Enable this only if you have a Zoho CRM
+  // Webform endpoint that accepts browser POSTs.
+  //
+  ZOHO_ENABLED:
+    false,
 
   ZOHO_WEBFORM_URL:
     "",
 
 
-  /*
-   * Website information
-   */
+  // ------------------------------------------------
+  // LEAD SOURCE
+  // ------------------------------------------------
 
   LEAD_SOURCE:
     "AssureState Website"
 
 };
-
 
 
 // ==================================================
@@ -69,195 +66,275 @@ const submitText =
   document.getElementById("submitText");
 
 
+// ==================================================
+// CHECK FORM EXISTS
+// ==================================================
+
+if (quoteForm) {
+
+  quoteForm.addEventListener(
+    "submit",
+    handleQuoteSubmission
+  );
+
+}
+
 
 // ==================================================
-// FORM SUBMISSION
+// MAIN FORM SUBMISSION
 // ==================================================
 
-quoteForm.addEventListener(
-  "submit",
-  async function (event) {
+async function handleQuoteSubmission(event) {
 
-    event.preventDefault();
+  event.preventDefault();
 
 
-    // ----------------------------------------------
-    // Browser validation
-    // ----------------------------------------------
+  // ------------------------------------------------
+  // Browser validation
+  // ------------------------------------------------
 
-    if (!quoteForm.checkValidity()) {
+  if (!quoteForm.checkValidity()) {
 
-      quoteForm.reportValidity();
+    quoteForm.reportValidity();
 
-      return;
+    return;
 
-    }
-
-
-    // ----------------------------------------------
-    // Honeypot protection
-    // ----------------------------------------------
-
-    const honeypot =
-      document.getElementById("website_url");
-
-    if (honeypot && honeypot.value.trim() !== "") {
-
-      return;
-
-    }
+  }
 
 
-    // ----------------------------------------------
-    // Loading state
-    // ----------------------------------------------
+  // ------------------------------------------------
+  // Honeypot protection
+  // ------------------------------------------------
 
-    submitButton.disabled = true;
+  const honeypot =
+    document.getElementById("website_url");
 
-    submitText.textContent =
-      "Sending Request...";
+  if (
+    honeypot &&
+    honeypot.value.trim() !== ""
+  ) {
 
-    formNote.className =
-      "form-status loading";
+    console.warn(
+      "Spam submission blocked."
+    );
 
-    formNote.textContent =
-      "Submitting your quote request...";
+    return;
 
+  }
+
+
+  // ------------------------------------------------
+  // Loading state
+  // ------------------------------------------------
+
+  setLoadingState();
+
+
+  try {
+
+
+    // ==================================================
+    // COLLECT FORM DATA
+    // ==================================================
+
+    const formData =
+      new FormData(quoteForm);
+
+
+    // ------------------------------------------------
+    // Add lead source
+    // ------------------------------------------------
+
+    formData.append(
+      "lead_source",
+      ASSURESTATE_CONFIG.LEAD_SOURCE
+    );
+
+
+    // ------------------------------------------------
+    // Add submission timestamp
+    // ------------------------------------------------
+
+    formData.append(
+      "submission_date",
+      new Date().toISOString()
+    );
+
+
+    // ==================================================
+    // SEND TO FORMSPREE
+    // ==================================================
+
+    const response =
+      await fetch(
+        ASSURESTATE_CONFIG.FORMSPREE_ENDPOINT,
+        {
+          method: "POST",
+
+          body: formData,
+
+          headers: {
+            "Accept":
+              "application/json"
+          }
+        }
+      );
+
+
+    // ==================================================
+    // READ FORMSPREE RESPONSE
+    // ==================================================
+
+    let result = {};
 
     try {
 
-
-      // ------------------------------------------
-      // Collect form information
-      // ------------------------------------------
-
-      const formData =
-        new FormData(quoteForm);
-
-
-      // ------------------------------------------
-      // Add timestamp
-      // ------------------------------------------
-
-      formData.append(
-        "submission_date",
-        new Date().toISOString()
-      );
-
-
-      // ------------------------------------------
-      // Send to Formspree
-      // ------------------------------------------
-
-      const response =
-        await fetch(
-          ASSURESTATE_CONFIG.FORMSPREE_ENDPOINT,
-          {
-
-            method: "POST",
-
-            body: formData,
-
-            headers: {
-
-              "Accept":
-                "application/json"
-
-            }
-
-          }
-        );
-
-
-      const result =
+      result =
         await response.json();
-
-
-      // ------------------------------------------
-      // Formspree error
-      // ------------------------------------------
-
-      if (!response.ok) {
-
-        let message =
-          "We could not submit your request.";
-
-        if (result.errors) {
-
-          message =
-            result.errors
-              .map(error => error.message)
-              .join(", ");
-
-        }
-
-        throw new Error(message);
-
-      }
-
-
-      // ------------------------------------------
-      // Success
-      // ------------------------------------------
-
-      formNote.className =
-        "form-status success";
-
-      formNote.textContent =
-        "Thank you! Your quote request has been received. An AssureState representative will contact you.";
-
-      submitText.textContent =
-        "Request Submitted";
-
-
-      // ------------------------------------------
-      // Optional Zoho integration
-      // ------------------------------------------
-
-      if (
-        ASSURESTATE_CONFIG.ZOHO_ENABLED &&
-        ASSURESTATE_CONFIG.ZOHO_WEBFORM_URL
-      ) {
-
-        await sendToZoho(formData);
-
-      }
-
-
-      // ------------------------------------------
-      // Clear form after success
-      // ------------------------------------------
-
-      quoteForm.reset();
-
-
-    } catch (error) {
-
-      console.error(
-        "AssureState form error:",
-        error
-      );
-
-
-      formNote.className =
-        "form-status error";
-
-      formNote.textContent =
-        "There was a problem submitting your request. Please try again or contact us directly.";
-
-      submitText.textContent =
-        "Submit Quote Request";
-
-
-    } finally {
-
-      submitButton.disabled = false;
 
     }
 
-  }
-);
+    catch (jsonError) {
 
+      console.warn(
+        "Formspree returned a non-JSON response."
+      );
+
+    }
+
+
+    // ==================================================
+    // HANDLE FORMSPREE ERROR
+    // ==================================================
+
+    if (!response.ok) {
+
+      let message =
+        "We could not submit your quote request.";
+
+      if (
+        result &&
+        Array.isArray(result.errors)
+      ) {
+
+        message =
+          result.errors
+            .map(
+              error => error.message
+            )
+            .join(", ");
+
+      }
+
+      throw new Error(message);
+
+    }
+
+
+    // ==================================================
+    // FORMSPREE SUCCESS
+    // ==================================================
+
+    console.log(
+      "Formspree submission successful:",
+      result
+    );
+
+
+    // ==================================================
+    // SEND TO ZOHO
+    // ==================================================
+    //
+    // IMPORTANT:
+    //
+    // This is optional.
+    //
+    // If ZOHO_ENABLED is false, this section
+    // will be skipped.
+    //
+    // ==================================================
+
+    if (
+      ASSURESTATE_CONFIG.ZOHO_ENABLED &&
+      ASSURESTATE_CONFIG.ZOHO_WEBFORM_URL
+    ) {
+
+      await sendToZoho(formData);
+
+    }
+
+
+    // ==================================================
+    // DISPLAY SUCCESS MESSAGE
+    // ==================================================
+
+    formNote.className =
+      "form-status success";
+
+    formNote.textContent =
+      "Thank you! Your quote request has been received. An AssureState representative will contact you.";
+
+    submitText.textContent =
+      "Request Submitted";
+
+
+    // ==================================================
+    // CLEAR FORM
+    // ==================================================
+
+    quoteForm.reset();
+
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "AssureState form error:",
+      error
+    );
+
+
+    formNote.className =
+      "form-status error";
+
+    formNote.textContent =
+      "There was a problem submitting your request. Please try again or contact us directly.";
+
+    submitText.textContent =
+      "Submit Quote Request";
+
+  }
+
+  finally {
+
+    submitButton.disabled =
+      false;
+
+  }
+
+}
+
+
+// ==================================================
+// LOADING STATE
+// ==================================================
+
+function setLoadingState() {
+
+  submitButton.disabled =
+    true;
+
+  submitText.textContent =
+    "Sending Request...";
+
+  formNote.className =
+    "form-status loading";
+
+  formNote.textContent =
+    "Submitting your quote request...";
+
+}
 
 
 // ==================================================
@@ -266,34 +343,30 @@ quoteForm.addEventListener(
 
 async function sendToZoho(formData) {
 
-  /*
-   * This function is intentionally separated from
-   * the Formspree submission.
-   *
-   * Zoho CRM Webforms use the field names and
-   * hidden fields generated by Zoho.
-   *
-   * Once you provide the Zoho Webform HTML,
-   * those fields can be mapped here.
-   */
-
-
   if (
     !ASSURESTATE_CONFIG.ZOHO_WEBFORM_URL
   ) {
+
+    console.warn(
+      "Zoho Webform URL has not been configured."
+    );
 
     return;
 
   }
 
 
+  // ==================================================
+  // CREATE ZOHO FORM DATA
+  // ==================================================
+
   const zohoData =
     new FormData();
 
 
-  // ----------------------------------------------
-  // Map AssureState fields to Zoho
-  // ----------------------------------------------
+  // ------------------------------------------------
+  // Customer name
+  // ------------------------------------------------
 
   zohoData.append(
     "Last Name",
@@ -301,11 +374,19 @@ async function sendToZoho(formData) {
   );
 
 
+  // ------------------------------------------------
+  // Email
+  // ------------------------------------------------
+
   zohoData.append(
     "Email",
     formData.get("email") || ""
   );
 
+
+  // ------------------------------------------------
+  // Phone
+  // ------------------------------------------------
 
   zohoData.append(
     "Phone",
@@ -313,11 +394,19 @@ async function sendToZoho(formData) {
   );
 
 
+  // ------------------------------------------------
+  // Company
+  // ------------------------------------------------
+
   zohoData.append(
     "Company",
     formData.get("business") || ""
   );
 
+
+  // ------------------------------------------------
+  // Insurance type
+  // ------------------------------------------------
 
   zohoData.append(
     "Insurance_Type",
@@ -325,11 +414,19 @@ async function sendToZoho(formData) {
   );
 
 
+  // ------------------------------------------------
+  // ZIP
+  // ------------------------------------------------
+
   zohoData.append(
     "ZIP_Code",
     formData.get("zip") || ""
   );
 
+
+  // ------------------------------------------------
+  // Current insurer
+  // ------------------------------------------------
 
   zohoData.append(
     "Current_Insurer",
@@ -337,11 +434,19 @@ async function sendToZoho(formData) {
   );
 
 
+  // ------------------------------------------------
+  // Renewal date
+  // ------------------------------------------------
+
   zohoData.append(
     "Renewal_Date",
     formData.get("renewal_date") || ""
   );
 
+
+  // ------------------------------------------------
+  // Additional details
+  // ------------------------------------------------
 
   zohoData.append(
     "Description",
@@ -349,47 +454,57 @@ async function sendToZoho(formData) {
   );
 
 
+  // ------------------------------------------------
+  // Lead source
+  // ------------------------------------------------
+
   zohoData.append(
     "Lead_Source",
     ASSURESTATE_CONFIG.LEAD_SOURCE
   );
 
 
-  /*
-   * Send to Zoho Webform
-   *
-   * NOTE:
-   *
-   * The exact Zoho field names must match
-   * your Zoho Webform generated fields.
-   */
+  // ==================================================
+  // SUBMIT TO ZOHO
+  // ==================================================
 
   try {
 
     await fetch(
       ASSURESTATE_CONFIG.ZOHO_WEBFORM_URL,
       {
-
         method: "POST",
 
         body: zohoData,
 
         mode: "no-cors"
-
       }
     );
 
-  } catch (error) {
+
+    console.log(
+      "Zoho submission sent."
+    );
+
+  }
+
+  catch (error) {
 
     console.error(
       "Zoho submission error:",
       error
     );
 
+    // Do NOT throw the error.
+    //
+    // Formspree already succeeded.
+    //
+    // Therefore the customer's submission
+    // should still be considered successful.
+
   }
 
 }
-
 
 
 // ==================================================
@@ -400,49 +515,52 @@ const phoneInput =
   document.getElementById("phone");
 
 
-phoneInput.addEventListener(
-  "input",
-  function () {
+if (phoneInput) {
 
-    let numbers =
-      this.value.replace(/\D/g, "");
+  phoneInput.addEventListener(
+    "input",
+    function () {
+
+      let numbers =
+        this.value.replace(/\D/g, "");
 
 
-    if (numbers.length > 10) {
+      if (numbers.length > 10) {
 
-      numbers =
-        numbers.substring(0, 10);
+        numbers =
+          numbers.substring(0, 10);
+
+      }
+
+
+      if (numbers.length >= 6) {
+
+        this.value =
+          `(${numbers.substring(0, 3)}) ` +
+          `${numbers.substring(3, 6)}-` +
+          `${numbers.substring(6)}`;
+
+      }
+
+      else if (numbers.length >= 3) {
+
+        this.value =
+          `(${numbers.substring(0, 3)}) ` +
+          numbers.substring(3);
+
+      }
+
+      else {
+
+        this.value =
+          numbers;
+
+      }
 
     }
+  );
 
-
-    if (numbers.length >= 6) {
-
-      this.value =
-        `(${numbers.substring(0, 3)}) ` +
-        `${numbers.substring(3, 6)}-` +
-        `${numbers.substring(6)}`;
-
-    }
-
-    else if (numbers.length >= 3) {
-
-      this.value =
-        `(${numbers.substring(0, 3)}) ` +
-        numbers.substring(3);
-
-    }
-
-    else {
-
-      this.value =
-        numbers;
-
-    }
-
-  }
-);
-
+}
 
 
 // ==================================================
@@ -453,19 +571,22 @@ const zipInput =
   document.getElementById("zip");
 
 
-zipInput.addEventListener(
-  "input",
-  function () {
+if (zipInput) {
 
-    this.value =
-      this.value.replace(
-        /[^0-9-]/g,
-        ""
-      );
+  zipInput.addEventListener(
+    "input",
+    function () {
 
-  }
-);
+      this.value =
+        this.value.replace(
+          /[^0-9-]/g,
+          ""
+        );
 
+    }
+  );
+
+}
 
 
 // ==================================================
@@ -482,3 +603,4 @@ if (yearElement) {
     new Date().getFullYear();
 
 }
+```
